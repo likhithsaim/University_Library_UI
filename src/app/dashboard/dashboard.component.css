@@ -1,0 +1,21 @@
+.positioning {
+    padding: 0 1em 0 1em;
+    max-height: 80vh;
+    overflow: scroll;
+    display: grid;
+}
+
+.dialog {
+    width: max-content;
+    text-align: center;
+    position: fixed;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    padding: 2vh;
+    border-radius: 2vh;
+}
+
+mat-form-field-appearance-standard mat-form-field-flex {
+    padding-top: 0px;
+}

@@ -1,0 +1,9 @@
+.alignment {
+    float: right;
+}
+
+mat-toolbar {
+    display: block;
+    padding-top: 15px;
+    
+}

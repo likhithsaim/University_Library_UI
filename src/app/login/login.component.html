@@ -1,0 +1,25 @@
+<mat-tab-group class="mat-elevation-z8" #tabGroup (selectedTabChange)="tabChanged($event)">
+    <mat-tab label="admin">
+        <form (ngSubmit)="onSubmit()" #loginForm="ngForm">
+            <mat-form-field appearance="standard">
+                <input [(ngModel)]="userId" matInput placeholder="user id" name="uname" type="text">
+            </mat-form-field>
+
+            <mat-form-field appearance="standard">
+                <input [(ngModel)]="password" matInput placeholder="password" name="password" type="password">
+            </mat-form-field>
+            <button mat-raised-button color="primary" type="submit">Submit</button>
+        </form>
+    </mat-tab>
+    <mat-tab label="student">
+        <form (ngSubmit)="onSubmit()" #loginForm="ngForm">
+            <mat-form-field appearance="standard">
+                <input [(ngModel)]="userId" matInput placeholder="user id" name="uname" type="text">
+            </mat-form-field>
+            <mat-form-field appearance="standard">
+                <input [(ngModel)]="password" matInput placeholder="password" name="password" type="password">
+            </mat-form-field>
+            <button mat-raised-button color="primary" type="submit">Submit</button>
+        </form>
+    </mat-tab>
+</mat-tab-group>
