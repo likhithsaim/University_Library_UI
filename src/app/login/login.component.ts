@@ -2,7 +2,8 @@ import { Component, OnInit } from '@angular/core';
 import { MatTabChangeEvent } from '@angular/material/tabs';
 import { Router } from '@angular/router';
 import { User } from '../user';
-import { bookList, userList } from '../data';
+import { userList } from '../data';
+import { UserService } from '../user.service';
 
 @Component({
   selector: 'app-login',
@@ -18,18 +19,31 @@ export class LoginComponent implements OnInit {
   public user?: User;
   adminTab: boolean = true;
 
-  constructor(private router: Router) { }
+  constructor(private router: Router, private userService: UserService) { }
 
   ngOnInit(): void {
-    this.user = new User(this.userId, this.password, this.name, this.admin);
+    userList.splice(0, userList.length);
+    this.userService.getUsers().subscribe((x: User[]) => {
+      x.forEach(user => userList.push(user));
+    });
+
+    this.userService.getAdminUsers().subscribe((x: User[]) => {
+      x.forEach(user => userList.push(user));
+    });
+
+    // this.user = new User(this.userId, this.password, this.name, this.admin);
   }
 
   onSubmit(): void {
     console.log('form submitted');
-    this.user = this.getUser();
+
+    if (this.adminTab) {
+      this.user = this.getAdminUser();
+    } else {
+      this.user = this.getUser();
+    }
 
     if (this.user !== undefined) {
-      this.admin = this.adminTab
       localStorage.setItem('currentUser', JSON.stringify(this.user));
       this.router.navigateByUrl('/dashboard');
     } else {
@@ -43,7 +57,17 @@ export class LoginComponent implements OnInit {
   }
 
   getUser(): User | undefined {
-    this.user = userList.find(x => x.id == this.userId && x.password === this.password && x.admin === this.adminTab);
+    this.user = userList.find(x => x.readerId == this.userId && x.password === this.password);
+    if (!!this.user)
+      this.user.admin = this.adminTab;
+    return this.user;
+  }
+
+  getAdminUser(): User | undefined {
+    this.user = userList.find(x => x.adminId == this.userId && x.password === this.password);
+    if (!!this.user) {
+      this.user.admin = this.adminTab;
+    }
     return this.user;
   }
 

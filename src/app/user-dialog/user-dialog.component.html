@@ -3,12 +3,21 @@
     <input type="text" placeholder="Pick one" aria-label="Number" matInput [formControl]="ctrlForUserSelect"
         [matAutocomplete]="auto">
     <mat-autocomplete #auto="matAutocomplete">
-        <mat-option *ngFor="let option of filteredUsersToAssign | async;" [value]="option.name + '(' + option.id + ')'"
-            (onSelectionChange)="getUser(option)">
-            {{option.name + '(' + option.id + ')'}}
+        <mat-option *ngFor="let option of filteredUsers | async;"
+            [value]="option.firstName + '(' + option.readerId + ')'" (onSelectionChange)="selectionChanged(option)">
+            {{option.firstName + '(' + option.readerId + ')'}}
         </mat-option>
     </mat-autocomplete>
 </mat-form-field>
 
+<section *ngIf="hasPenalty" style="margin: 10px;">
+    <p style="color: red;">penality is ${{penalty}}</p>
+    <mat-checkbox color="primary" [(ngModel)]="isChecked" (change)="checked($event, okBtn)">
+        <span>check if paid</span>
+    </mat-checkbox>
+    <p></p>
+</section>
+
 <button mat-button (click)="onNoClick()">No Thanks</button>
-<button mat-button [mat-dialog-close]="user" cdkFocusInitial>Ok</button>
+<button [disabled]="hasPenalty" mat-button [mat-dialog-close]="user" cdkFocusInitial #okBtn
+    (click)="submitted()">Ok</button>

@@ -6,18 +6,27 @@ import { MatTabChangeEvent } from '@angular/material/tabs';
 import { MatDialog } from '@angular/material/dialog';
 import { map, Observable, startWith } from 'rxjs';
 import { Book } from '../book';
-import { bookList, userList } from '../data';
+import { userList } from '../data';
 import { User } from '../user';
 import { UserDialogComponent } from '../user-dialog/user-dialog.component';
 import { BookService } from '../book.service';
+import { ReservationService } from '../reservation.service';
+import { Reservation } from '../reservation';
 
-type BookUi = {
-  name: string;
+export type BookUi = {
+  title: string;
   pages: number;
   subject: string;
+  departmentId: number;
   userId?: number;
   available: number;
   total: number;
+}
+
+export type UserDialogData = {
+  bookUi: BookUi;
+  action: string;
+  books : Book[];
 }
 
 @Component({
@@ -28,8 +37,21 @@ type BookUi = {
 export class DashboardComponent implements OnInit {
 
   users: User[] = [];
-  books: Book[] = [];
+  dummyBook: Book = {
+    id: 0,
+    departmentId: 0,
+    title: '',
+    authorName: '',
+    publishedYear: '',
+    rackNumber: '',
+    status: '',
+    pageCount: 0,
+    subject: '',
+    userId: 0
+  };
   userDataToDisplay: any;
+  books: Book[] = []
+  reservations: Reservation[] = []
   uiBooks: BookUi[] = [];
   checkedBooks: Book[] = [];
   checkedBooksUI: Book[] = [];
@@ -48,68 +70,89 @@ export class DashboardComponent implements OnInit {
   filteredUsersToAssign!: Observable<string[]>;
   userToAssign!: User;
 
-  constructor(public dialog: MatDialog, public bookService : BookService) { }
+  constructor(public dialog: MatDialog, public bookService: BookService, public reservationServie: ReservationService) { }
 
   ngOnInit(): void {
-    this.bookService.getHelloMessage().subscribe((x : string)=> console.log(x));
-    this.map.clear();
-    const userString = localStorage.getItem("currentUser");
-    if (userString != null) {
-      this.user = JSON.parse(userString);
-      this.users = userList;
-      this.books = bookList;
-      this.displayedColumnsForChecked = ['id', 'name', 'pages', 'subject'];
-      if (this.user.admin) {
-        this.displayedColumnsForRemaining = ['id', 'name', 'pages', 'subject', 'availability', 'assign', 'return'];
-      } else {
-        this.displayedColumnsForRemaining = ['id', 'name', 'pages', 'subject', 'availability'];
-      }
-      this.checkedBooksUI = this.checkedBooks = this.books.filter(book => book.userId === this.user.id);
-      this.unCheckedBooks = this.books.filter(book => book.userId !== this.user.id);
+    // this.reservations.splice(0,this.reservations.length);
+    this.reservationServie.getReservations().subscribe((x: Reservation[]) => {
+      x.forEach(reservation => this.reservations.push(reservation));
+    });
+    this.updateBooks();
+    // this.books.splice(0,this.books.length);
+  }
 
-      // Group all books and create a map with name+subject as key
-      this.books.forEach(x => {
-        let key: string = x.name + ':' + x.subject;
-        if (this.map.has(key)) {
-          this.map.get(key)?.push(x);
+  updateBooks(): void {
+    this.books.splice(0, this.books.length);
+    this.bookService.getBooksForUi().subscribe((x: Book[]) => {
+      x.forEach(book => this.books.push({ ...this.dummyBook, ...book }));
+
+      this.map.clear();
+      const userString = localStorage.getItem("currentUser");
+      if (userString != null) {
+        this.user = JSON.parse(userString);
+        this.users = userList;
+        this.displayedColumnsForChecked = ['id', 'title', 'author', 'pages', 'subject', 'rack'];
+        if (this.user.admin) {
+          this.displayedColumnsForRemaining = ['id', 'title', 'author', 'pages', 'subject', 'rack', 'availability', 'assign', 'return'];
         } else {
-          this.map.set(key, [x]);
+          this.displayedColumnsForRemaining = ['id', 'title', 'author', 'pages', 'subject', 'rack', 'availability'];
         }
-      });
+        this.checkedBooksUI = this.checkedBooks = this.books.filter(book => book.userId === this.user.readerId);
+        this.unCheckedBooks = this.books.filter(book => book.userId !== this.user.readerId);
 
+        console.log('checked books', this.checkedBooks);
+        console.log('unchecked books', this.unCheckedBooks);
 
-      this.map.forEach(x => {
-        let uiB: BookUi = {
-          ...x[0],
-          available: x.filter(y => y.userId === undefined || y.userId === null).length,
-          total: x.length
-        };
-        this.uiBooks.push(uiB);
-      });
+        // Group all books and create a map with name+subject as key
+        this.map.clear();
+        this.books.forEach(x => {
+          let key: string = x.title + ':' + x.subject;
+          if (this.map.has(key)) {
+            this.map.get(key)?.push(x);
+          } else {
+            this.map.set(key, [x]);
+          }
+        });
 
-      this.noCheckedBooks = this.checkedBooks.length <= 0;
-      this.noUnCheckedBooks = this.uiBooks.length <= 0;
-      this.unCheckedBooksUI = this.uiBooks;
-      this.filteredUsersToAssign = this.ctrlForUserSelect.valueChanges.pipe(
-        startWith(''),
-        map(value => this.filterUsersToAssign(value)),
-      );
-    }
+        this.uiBooks.splice(0, this.uiBooks.length);
+        this.map.forEach(x => {
+          let uiB: BookUi = {
+            ...x[0],
+            available: x.filter(y => y.userId === undefined || y.userId === null || !y.userId).length,
+            total: x.length,
+            pages: 0,
+          };
+          this.uiBooks.push(uiB);
+        });
+
+        this.noCheckedBooks = this.checkedBooks.length <= 0;
+        this.noUnCheckedBooks = this.uiBooks.length <= 0;
+        this.unCheckedBooksUI = this.uiBooks;
+        this.filteredUsersToAssign = this.ctrlForUserSelect.valueChanges.pipe(
+          startWith(''),
+          map(value => this.filterUsersToAssign(value)),
+        );
+      }
+    })
   }
 
   filterUsersToAssign(value: string): string[] {
-    return userList.filter(x => x.name.toLowerCase().startsWith(value.toLowerCase()) || x.id.toString().startsWith(value)).map(x => x.name + '(' + x.id + ')');
+    return userList.filter(x => x.firstName.toLowerCase().startsWith(value.toLowerCase()) || x.readerId.toString().startsWith(value)).map(x => x.firstName + '(' + x.readerId + ')');
   }
 
   toggleCheck() {
-    console.log("Checked books:", this.books.filter(book => book.userId !== null).map(book => book.name));
+    console.log("Checked books:", this.books.filter(book => book.userId !== null).map(book => book.title));
   }
 
   filterBooksWithTab(filterValue: string) {
-    if (this.tabName === 'My Books') {
-      this.checkedBooksUI = this.checkedBooks.filter(data => data.name.toLowerCase().startsWith(filterValue.toLowerCase()) || data.subject.toLowerCase().startsWith(filterValue.toLowerCase()));
+    if (this.user.admin) {
+      this.unCheckedBooksUI = this.uiBooks.filter(data => data.title.toLowerCase().startsWith(filterValue.toLowerCase()) || data.subject.toLowerCase().startsWith(filterValue.toLowerCase()));
     } else {
-      this.unCheckedBooksUI = this.uiBooks.filter(data => data.name.toLowerCase().startsWith(filterValue.toLowerCase()) || data.subject.toLowerCase().startsWith(filterValue.toLowerCase()));
+      if (this.tabName === 'My Books') {
+        this.checkedBooksUI = this.checkedBooks.filter(data => data.title.toLowerCase().startsWith(filterValue.toLowerCase()) || data.subject.toLowerCase().startsWith(filterValue.toLowerCase()));
+      } else if (this.tabName === 'Inventory') {
+        this.unCheckedBooksUI = this.uiBooks.filter(data => data.title.toLowerCase().startsWith(filterValue.toLowerCase()) || data.subject.toLowerCase().startsWith(filterValue.toLowerCase()));
+      }
     }
   }
 
@@ -127,10 +170,18 @@ export class DashboardComponent implements OnInit {
   openDialogToAssign(b: BookUi): void {
     this.dialog.open(UserDialogComponent, {
       width: '250px',
-      data: { user: this.userToAssign }
+      data: { bookUi: b, action: 'assign' }
     }).afterClosed().subscribe(result => {
-      if (result?.name) {
-        alert('book ' + b.name + ' is checked out by ' + result?.name);
+      if (result.firstName) {
+        alert('book ' + b.title + ' is checked out by ' + result.firstName);
+        let booksToAssign = this.books.filter(book => book.departmentId === b.departmentId && book.subject === b.subject && book.title === b.title && (!b.userId || b.userId == null || b.userId == undefined));
+        let reservation = new Reservation(-1, result.readerId, this.user.adminId, booksToAssign[0].id, new Date(), (new Date(new Date().getTime() + (7 * 24 * 60 * 60 * 1000))), 'Yet to return', null, 0);
+        this.reservationServie.postReservation(reservation).subscribe(res => {
+          console.log(res);
+          this.updateBooks();
+          console.log('updated books', this.books, this.uiBooks);
+          location.reload();
+        });
       }
     });
   }
@@ -138,10 +189,11 @@ export class DashboardComponent implements OnInit {
   openDialogToReturn(b: BookUi): void {
     this.dialog.open(UserDialogComponent, {
       width: '250px',
-      data: { user: this.userToAssign }
+      data: { bookUi: b, action: 'return', books: this.books }
     }).afterClosed().subscribe(result => {
-      if (result?.name) {
-        alert('book ' + b.name + ' is reurned by ' + result.name);
+      if (result?.firstName) {
+        alert('book ' + b.title + ' is reurned by ' + result.firstName);
+        location.reload();
       }
     });
 

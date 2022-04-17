@@ -1,7 +1,7 @@
 <app-navbar></app-navbar>
 
 <mat-tab-group class="mat-elevation-z8" (selectedTabChange)="tabChanged($event)">
-    <mat-tab label="My Books">
+    <mat-tab *ngIf="!!user && !user.admin" label="My Books">
         <section *ngIf="noCheckedBooks" class="dialog">
             No checked books available to show
         </section>
@@ -14,23 +14,33 @@
 
             <table mat-table [dataSource]="checkedBooksUI" class="mat-elevation-z8">
                 <ng-container matColumnDef="id">
-                    <th mat-header-cell *matHeaderCellDef> No. </th>
-                    <td mat-cell *matCellDef="let element;index as i"> {{i+1}} </td>
+                    <th mat-header-cell *matHeaderCellDef> Book ID </th>
+                    <td mat-cell *matCellDef="let element;index as i"> {{element.id}} </td>
                 </ng-container>
 
-                <ng-container matColumnDef="name">
-                    <th mat-header-cell *matHeaderCellDef> Name </th>
-                    <td mat-cell *matCellDef="let element"> {{element.name}} </td>
+                <ng-container matColumnDef="title">
+                    <th mat-header-cell *matHeaderCellDef> Title </th>
+                    <td mat-cell *matCellDef="let element"> {{element.title}} </td>
+                </ng-container>
+
+                <ng-container matColumnDef="author">
+                    <th mat-header-cell *matHeaderCellDef> Author </th>
+                    <td mat-cell *matCellDef="let element"> {{element.authorName}} </td>
                 </ng-container>
 
                 <ng-container matColumnDef="pages">
                     <th mat-header-cell *matHeaderCellDef> Pages </th>
-                    <td mat-cell *matCellDef="let element"> {{element.pages}} </td>
+                    <td mat-cell *matCellDef="let element"> {{element.pageCount}} </td>
                 </ng-container>
 
                 <ng-container matColumnDef="subject">
                     <th mat-header-cell *matHeaderCellDef> Subject </th>
                     <td mat-cell *matCellDef="let element"> {{element.subject}} </td>
+                </ng-container>
+
+                <ng-container matColumnDef="rack">
+                    <th mat-header-cell *matHeaderCellDef> Rack No. </th>
+                    <td mat-cell *matCellDef="let element"> {{element.rackNumber}} </td>
                 </ng-container>
 
                 <ng-container matColumnDef="checked">
@@ -66,14 +76,19 @@
                     <td mat-cell *matCellDef="let element;index as i"> {{i+1}} </td>
                 </ng-container>
 
-                <ng-container matColumnDef="name">
-                    <th mat-header-cell *matHeaderCellDef> Name </th>
-                    <td mat-cell *matCellDef="let element"> {{element.name}} </td>
+                <ng-container matColumnDef="title">
+                    <th mat-header-cell *matHeaderCellDef> Title </th>
+                    <td mat-cell *matCellDef="let element"> {{element.title}} </td>
+                </ng-container>
+
+                <ng-container matColumnDef="author">
+                    <th mat-header-cell *matHeaderCellDef> Author </th>
+                    <td mat-cell *matCellDef="let element"> {{element.authorName}} </td>
                 </ng-container>
 
                 <ng-container matColumnDef="pages">
                     <th mat-header-cell *matHeaderCellDef> Pages </th>
-                    <td mat-cell *matCellDef="let element"> {{element.pages}} </td>
+                    <td mat-cell *matCellDef="let element"> {{element.pageCount}} </td>
                 </ng-container>
 
                 <ng-container matColumnDef="subject">
@@ -81,48 +96,35 @@
                     <td mat-cell *matCellDef="let element"> {{element.subject}} </td>
                 </ng-container>
 
+                <ng-container matColumnDef="rack">
+                    <th mat-header-cell *matHeaderCellDef> Rack No. </th>
+                    <td mat-cell *matCellDef="let element"> {{element.rackNumber}} </td>
+                </ng-container>
+
                 <ng-container matColumnDef="availability">
                     <th mat-header-cell *matHeaderCellDef> Availability </th>
                     <td mat-cell *matCellDef="let element"> {{element.available+'/'+element.total}} </td>
                 </ng-container>
 
-                <ng-container matColumnDef="assign" *ngIf="user.admin">
+                <ng-container matColumnDef="assign" *ngIf="!!user && user.admin">
                     <th mat-header-cell *matHeaderCellDef> Assign </th>
                     <td mat-cell *matCellDef="let element">
-                        <button mat-icon-button (click)="openDialogToAssign(element)" #assignButton>
+                        <button [disabled]="element.available == 0" mat-icon-button
+                            (click)="openDialogToAssign(element)" #assignButton>
                             <mat-icon>person_add</mat-icon>
                         </button>
-                        <!-- <mat-form-field appearance="fill" #assignSelect>
-                            <mat-label>User Name / ID</mat-label>
-                            <input type="text" placeholder="Pick one" aria-label="Number" matInput
-                                [formControl]="ctrlForUserSelect" [matAutocomplete]="auto">
-                            <mat-autocomplete #auto="matAutocomplete">
-                                <mat-option *ngFor="let option of filteredUsersToAssign | async;"
-                                    [value]="option">
-                                    {{option}}
-                                </mat-option>
-                            </mat-autocomplete>
-                        </mat-form-field> -->
                     </td>
                 </ng-container>
 
-                <ng-container matColumnDef="return" *ngIf="user.admin">
+                <ng-container matColumnDef="return" *ngIf="!!user && user.admin">
                     <th mat-header-cell *matHeaderCellDef> Return </th>
                     <td mat-cell *matCellDef="let element">
-                        <button mat-icon-button (click)="openDialogToReturn(element)" #returnButton>
+                        <button [disabled]="element.available == element.total" mat-icon-button
+                            (click)="openDialogToReturn(element)" #returnButton>
                             <mat-icon>person_remove_alt_1</mat-icon>
                         </button>
                     </td>
                 </ng-container>
-
-                <!-- <ng-container matColumnDef="checked">
-                    <th mat-header-cell *matHeaderCellDef> checked</th>
-                    <td mat-cell *matCellDef="let element">
-                        <mat-checkbox disabled="true" color="primary" [(ngModel)]="element.checked"
-                            (change)="$event ? toggleCheck() : null">
-                        </mat-checkbox>
-                    </td>
-                </ng-container> -->
 
                 <tr mat-header-row *matHeaderRowDef="displayedColumnsForRemaining; sticky:true;"></tr>
                 <tr mat-row *matRowDef="let row; columns: displayedColumnsForRemaining; index as i"></tr>

@@ -1,21 +1,34 @@
-import { Book } from "./book";
-
 export class User {
-  public name: string;
+  public readerId: number;
+  public adminId: number;
+  public email: string;
+  public address: string;
+  public firstName: string;
+  public lastName: string;
+  public gender: string;
   public password: string;
-  public id: number;
+  
   public admin: boolean;
 
   constructor(
-    id: number,
-    password: string,
-    name: string,
-    admin: boolean,
+    readerId: number,
+   adminId: number,
+   email: string,
+   address: string,
+   firstName: string,
+   lastName: string,
+   gender: string,
+   password: string
   ) {
-    this.name = name;
-    this.password = password;
-    this.id = id;
-    this.admin = admin;
+    this.readerId = readerId;
+    this.adminId = adminId;
+    this.email = email;
+    this.address = address;
+    this.firstName = firstName;
+    this.lastName = lastName;
+    this.gender = gender;
+    this.password =password;
+    this.admin =!!adminId;
   }
 
 }

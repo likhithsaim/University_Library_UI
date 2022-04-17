@@ -1,10 +1,14 @@
 import { Component, Inject, OnInit } from '@angular/core';
 import { FormControl } from '@angular/forms';
-import { MatOption } from '@angular/material/core';
+import { MatButton } from '@angular/material/button';
+import { MatCheckboxChange } from '@angular/material/checkbox';
 import { MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { map, Observable, startWith } from 'rxjs';
-import { userList } from '../data';
+import { UserDialogData } from '../dashboard/dashboard.component';
+import { Reservation } from '../reservation';
+import { ReservationService } from '../reservation.service';
 import { User } from '../user';
+import { UserService } from '../user.service';
 
 @Component({
   selector: 'app-user-dialog',
@@ -14,27 +18,92 @@ import { User } from '../user';
 export class UserDialogComponent implements OnInit {
 
   filteredUsersToAssign!: Observable<User[]>;
+  filteredUsersToDeAssign!: Observable<User[]>;
+  filteredUsers!: Observable<User[]>;
   ctrlForUserSelect = new FormControl();
+  isChecked = false;
+  user!: User;
+  allUsers: User[] = [];
+  usersOfBook: User[] = [];
+  reservation!: Reservation;
+  penalty!: number;
+  hasPenalty:boolean = false;
 
   constructor(public dialogRef: MatDialogRef<UserDialogComponent>,
-    @Inject(MAT_DIALOG_DATA) public user: User) { }
+    @Inject(MAT_DIALOG_DATA) public userDialogData: UserDialogData, private userService: UserService, private reservationService: ReservationService) {
+    console.log(userDialogData.bookUi)
+  }
 
   ngOnInit(): void {
-    this.filteredUsersToAssign = this.ctrlForUserSelect.valueChanges.pipe(
-      startWith(''),
-      map(value => this.filterUsersToAssign(value)),
-    );
+    if (this.userDialogData.action === 'assign') {
+      this.userService.getUsers().subscribe(users => {
+        this.allUsers = users;
+        this.filteredUsers = this.ctrlForUserSelect.valueChanges.pipe(
+          startWith(''),
+          map(value => this.filterUsersToAssign(value)),
+        );
+      });
+    } else {
+      this.userService.getUsersOfBook(this.userDialogData.bookUi.departmentId, this.userDialogData.bookUi.subject, this.userDialogData.bookUi.title).subscribe(users => {
+        this.usersOfBook = users;
+        this.filteredUsers = this.ctrlForUserSelect.valueChanges.pipe(
+          startWith(''),
+          map(value => this.filterUsersOfBook(value)),
+        );
+      });
+    }
   }
 
   filterUsersToAssign(value: string): User[] {
-    return userList.filter(x => x.name.toLowerCase().startsWith(value.toString().toLowerCase()) || x.id.toString().startsWith(value));
+    return this.allUsers.filter(x => x.firstName.toLowerCase().startsWith(value.toString().toLowerCase()) || x.readerId.toString().startsWith(value));
+  }
+
+  filterUsersOfBook(value: string): User[] {
+    if (this.usersOfBook != null) {
+      return this.usersOfBook.filter(x => x.firstName.toLowerCase().startsWith(value.toString().toLowerCase()) || x.readerId.toString().startsWith(value));
+    } else {
+      return [];
+    }
   }
 
   onNoClick(): void {
     this.dialogRef.close();
   }
 
-  getUser(usr: User) {
+  selectionChanged(usr: User) {
     this.user = usr;
+    console.log(this.user);
+    console.log(this.userDialogData.bookUi);
+    if (this.userDialogData.action === 'return') {
+      let matchedBook = this.userDialogData.books.find(book => book.departmentId === this.userDialogData.bookUi.departmentId && book.subject === this.userDialogData.bookUi.subject && book.title === this.userDialogData.bookUi.title && !!book.userId && book.userId === this.user.readerId);
+      console.log('matched book', matchedBook);
+      if (!!matchedBook) {
+        this.reservationService.getReservation(matchedBook.userId, matchedBook.id).subscribe(res => {
+          this.reservation = res;
+          console.log('reservation', this.reservation);
+          if (!!this.reservation) {
+            let dayDiff = this.getDifferenceInDays(new Date(), this.reservation.reservationDate);
+            this.penalty = 10 + ((dayDiff-8) *2);
+            this.hasPenalty = this.penalty > 0;
+            console.log(this.penalty);
+          }
+        });
+      }
+    }
+  }
+
+  checked(event: MatCheckboxChange, okBtn: MatButton) {
+    this.isChecked = event.checked;
+    okBtn.disabled = !event.checked;
+  }
+
+  getDifferenceInDays(date1: Date, date2: Date) {
+    let timeInMilisec: number = new Date(date1).getTime() - new Date(date2).getTime();
+    return Math.ceil(timeInMilisec / (1000 * 60 * 60 * 24));
+  }
+
+  submitted() {
+    console.log(this.penalty, this.reservation.reservationId);
+    this.reservationService.patchReservation(this.penalty < 0 ? 0 : this.penalty, this.reservation.reservationId).subscribe(res=>console.log('patch complete',res));
   }
 }
