@@ -35,8 +35,6 @@ export class LoginComponent implements OnInit {
   }
 
   onSubmit(): void {
-    console.log('form submitted');
-
     if (this.adminTab) {
       this.user = this.getAdminUser();
     } else {
@@ -53,7 +51,6 @@ export class LoginComponent implements OnInit {
 
   tabChanged(tabChangeEvent: MatTabChangeEvent) {
     this.adminTab = tabChangeEvent.tab.textLabel === 'admin' ? true : false;
-    console.log(this.adminTab);
   }
 
   getUser(): User | undefined {

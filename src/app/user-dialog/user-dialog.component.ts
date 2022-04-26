@@ -31,7 +31,6 @@ export class UserDialogComponent implements OnInit {
 
   constructor(public dialogRef: MatDialogRef<UserDialogComponent>,
     @Inject(MAT_DIALOG_DATA) public userDialogData: UserDialogData, private userService: UserService, private reservationService: ReservationService) {
-    console.log(userDialogData.bookUi)
   }
 
   ngOnInit(): void {
@@ -72,20 +71,15 @@ export class UserDialogComponent implements OnInit {
 
   selectionChanged(usr: User) {
     this.user = usr;
-    console.log(this.user);
-    console.log(this.userDialogData.bookUi);
     if (this.userDialogData.action === 'return') {
       let matchedBook = this.userDialogData.books.find(book => book.departmentId === this.userDialogData.bookUi.departmentId && book.subject === this.userDialogData.bookUi.subject && book.title === this.userDialogData.bookUi.title && !!book.userId && book.userId === this.user.readerId);
-      console.log('matched book', matchedBook);
       if (!!matchedBook) {
         this.reservationService.getReservation(matchedBook.userId, matchedBook.id).subscribe(res => {
           this.reservation = res;
-          console.log('reservation', this.reservation);
           if (!!this.reservation) {
             let dayDiff = this.getDifferenceInDays(new Date(), this.reservation.reservationDate);
             this.penalty = 10 + ((dayDiff-8) *2);
             this.hasPenalty = this.penalty > 0;
-            console.log(this.penalty);
           }
         });
       }
@@ -103,7 +97,6 @@ export class UserDialogComponent implements OnInit {
   }
 
   submitted() {
-    console.log(this.penalty, this.reservation.reservationId);
     this.reservationService.patchReservation(this.penalty < 0 ? 0 : this.penalty, this.reservation.reservationId).subscribe(res=>console.log('patch complete',res));
   }
 }

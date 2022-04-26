@@ -26,7 +26,7 @@ export type BookUi = {
 export type UserDialogData = {
   bookUi: BookUi;
   action: string;
-  books : Book[];
+  books: Book[];
 }
 
 @Component({
@@ -47,7 +47,8 @@ export class DashboardComponent implements OnInit {
     status: '',
     pageCount: 0,
     subject: '',
-    userId: 0
+    userId: 0,
+    dueDate: undefined
   };
   userDataToDisplay: any;
   books: Book[] = []
@@ -69,19 +70,19 @@ export class DashboardComponent implements OnInit {
   ctrlForUserSelect = new FormControl();
   filteredUsersToAssign!: Observable<string[]>;
   userToAssign!: User;
+  today!: Date;
 
   constructor(public dialog: MatDialog, public bookService: BookService, public reservationServie: ReservationService) { }
 
   ngOnInit(): void {
-    // this.reservations.splice(0,this.reservations.length);
     this.reservationServie.getReservations().subscribe((x: Reservation[]) => {
       x.forEach(reservation => this.reservations.push(reservation));
+      this.updateBooks();
     });
-    this.updateBooks();
-    // this.books.splice(0,this.books.length);
   }
 
   updateBooks(): void {
+    this.today = new Date();
     this.books.splice(0, this.books.length);
     this.bookService.getBooksForUi().subscribe((x: Book[]) => {
       x.forEach(book => this.books.push({ ...this.dummyBook, ...book }));
@@ -91,17 +92,18 @@ export class DashboardComponent implements OnInit {
       if (userString != null) {
         this.user = JSON.parse(userString);
         this.users = userList;
-        this.displayedColumnsForChecked = ['id', 'title', 'author', 'pages', 'subject', 'rack'];
+        this.displayedColumnsForChecked = ['id', 'title', 'author', 'pages', 'subject', 'rack', 'due'];
         if (this.user.admin) {
           this.displayedColumnsForRemaining = ['id', 'title', 'author', 'pages', 'subject', 'rack', 'availability', 'assign', 'return'];
         } else {
           this.displayedColumnsForRemaining = ['id', 'title', 'author', 'pages', 'subject', 'rack', 'availability'];
         }
-        this.checkedBooksUI = this.checkedBooks = this.books.filter(book => book.userId === this.user.readerId);
+        this.checkedBooks = this.books.filter(book => book.userId === this.user.readerId);
+        this.checkedBooks.forEach(book => {
+          book.dueDate = this.reservations.find(reservation => reservation.bookId === book.id && reservation.status === 'Yet to return')?.dueDate;
+        })
+        this.checkedBooksUI = this.checkedBooks;
         this.unCheckedBooks = this.books.filter(book => book.userId !== this.user.readerId);
-
-        console.log('checked books', this.checkedBooks);
-        console.log('unchecked books', this.unCheckedBooks);
 
         // Group all books and create a map with name+subject as key
         this.map.clear();
@@ -140,10 +142,6 @@ export class DashboardComponent implements OnInit {
     return userList.filter(x => x.firstName.toLowerCase().startsWith(value.toLowerCase()) || x.readerId.toString().startsWith(value)).map(x => x.firstName + '(' + x.readerId + ')');
   }
 
-  toggleCheck() {
-    console.log("Checked books:", this.books.filter(book => book.userId !== null).map(book => book.title));
-  }
-
   filterBooksWithTab(filterValue: string) {
     if (this.user.admin) {
       this.unCheckedBooksUI = this.uiBooks.filter(data => data.title.toLowerCase().startsWith(filterValue.toLowerCase()) || data.subject.toLowerCase().startsWith(filterValue.toLowerCase()));
@@ -161,7 +159,6 @@ export class DashboardComponent implements OnInit {
   }
 
   doAssign(b: MatButton, s: MatFormField) {
-    console.log(b);
     b._elementRef.nativeElement.style.display = 'none';
     s._elementRef.nativeElement.style.display = '';
     this.hideUserToAssign = false;
@@ -177,9 +174,7 @@ export class DashboardComponent implements OnInit {
         let booksToAssign = this.books.filter(book => book.departmentId === b.departmentId && book.subject === b.subject && book.title === b.title && (!b.userId || b.userId == null || b.userId == undefined));
         let reservation = new Reservation(-1, result.readerId, this.user.adminId, booksToAssign[0].id, new Date(), (new Date(new Date().getTime() + (7 * 24 * 60 * 60 * 1000))), 'Yet to return', null, 0);
         this.reservationServie.postReservation(reservation).subscribe(res => {
-          console.log(res);
           this.updateBooks();
-          console.log('updated books', this.books, this.uiBooks);
           location.reload();
         });
       }

@@ -10,6 +10,7 @@ export class Book {
     public pageCount: number;
     public subject: string;
     public userId: number;
+    public dueDate: Date | undefined;
 
     constructor(
         id: number,
@@ -21,7 +22,8 @@ export class Book {
         status: string,
         pageCount: number,
         subject: string,
-        userId: number
+        userId: number,
+        dueDate: Date
     ) {
         this.id = id;
         this.departmentId = departmentId;
@@ -33,6 +35,7 @@ export class Book {
         this.pageCount = pageCount;
         this.subject = subject;
         this.userId = userId;
+        this.dueDate = dueDate;
     }
 
 }
