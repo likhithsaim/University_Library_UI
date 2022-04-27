@@ -171,7 +171,9 @@ export class DashboardComponent implements OnInit {
     }).afterClosed().subscribe(result => {
       if (result.firstName) {
         alert('book ' + b.title + ' is checked out by ' + result.firstName);
-        let booksToAssign = this.books.filter(book => book.departmentId === b.departmentId && book.subject === b.subject && book.title === b.title && (!b.userId || b.userId == null || b.userId == undefined));
+        console.log('b',b);
+        console.log('books', this.books);
+        let booksToAssign = this.books.filter(book => book.departmentId === b.departmentId && book.subject === b.subject && book.title === b.title && (!book.userId || book.userId == null || book.userId == undefined || book.userId == 0));
         let reservation = new Reservation(-1, result.readerId, this.user.adminId, booksToAssign[0].id, new Date(), (new Date(new Date().getTime() + (7 * 24 * 60 * 60 * 1000))), 'Yet to return', null, 0);
         this.reservationServie.postReservation(reservation).subscribe(res => {
           this.updateBooks();
