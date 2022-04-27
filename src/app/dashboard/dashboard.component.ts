@@ -187,7 +187,7 @@ export class DashboardComponent implements OnInit {
       data: { bookUi: b, action: 'return', books: this.books }
     }).afterClosed().subscribe(result => {
       if (result?.firstName) {
-        alert('book ' + b.title + ' is reurned by ' + result.firstName);
+        alert('book ' + b.title + ' is returned by ' + result.firstName);
         location.reload();
       }
     });
